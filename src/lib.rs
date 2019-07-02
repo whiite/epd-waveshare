@@ -87,6 +87,44 @@ pub mod prelude {
 
 use embedded_hal::spi::{Mode, Phase, Polarity};
 
+
+use embedded_hal::{
+    blocking::{spi::Write},
+    digital::v2::*,
+};
+
+/// Errors in this crate
+#[derive(Debug)]
+pub enum Error<SpiE, PinRE, PinWE> {
+    /// Communication error
+    Spi(SpiE),
+    /// Pin reading error
+    PinRead(PinRE),
+    /// Pin writing error
+    PinWrite(PinWE), 
+}
+
+impl<SpiE, PinRE, PinWE> From<SpiE> for Error<SpiE, PinRE, PinWE> {
+    fn from(error: SpiE) -> Self {
+        Error::Spi(error)
+    }
+}
+
+impl<SpiE, PinRE, PinWE> From<PinRE> for Error<SpiE, PinRE, PinWE> 
+where PinRE: OutputPin::Error{
+    
+    fn from(error: PinRE) -> Self {
+        Error::PinRead(error)
+    }
+}
+
+impl<SpiE, PinRE, PinWE> From<PinWE> for Error<SpiE, PinRE, PinWE> {
+    fn from(error: PinWE) -> Self {
+        Error::Spi(error)
+    }
+}
+
+
 /// SPI mode -
 /// For more infos see [Requirements: SPI](index.html#spi)
 pub const SPI_MODE: Mode = Mode {

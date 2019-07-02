@@ -2,8 +2,9 @@ use crate::traits::Command;
 use core::marker::PhantomData;
 use embedded_hal::{
     blocking::{delay::*, spi::Write},
-    digital::*,
+    digital::v2::*,
 };
+use crate::Error;
 
 /// The Connection Interface of all (?) Waveshare EPD-Devices
 ///
@@ -20,13 +21,13 @@ pub(crate) struct DisplayInterface<SPI, CS, BUSY, DC, RST> {
     rst: RST,
 }
 
-impl<SPI, CS, BUSY, DC, RST> DisplayInterface<SPI, CS, BUSY, DC, RST>
+impl<SPI, CS, BUSY, DC, RST, SpiE, PinRE, PinWE> DisplayInterface<SPI, CS, BUSY, DC, RST>
 where
-    SPI: Write<u8>,
-    CS: OutputPin,
-    BUSY: InputPin,
-    DC: OutputPin,
-    RST: OutputPin,
+    SPI: Write<u8, Error = SpiE>,
+    CS: OutputPin<Error = PinWE>,
+    BUSY: InputPin<Error = PinRE>,
+    DC: OutputPin<Error = PinWE>,
+    RST: OutputPin<Error = PinWE>,
 {
     pub fn new(cs: CS, busy: BUSY, dc: DC, rst: RST) -> Self {
         DisplayInterface {
@@ -151,7 +152,7 @@ where
     /// Most likely there was a mistake with the 2in9 busy connection
     /// //TODO: use the #cfg feature to make this compile the right way for the certain types
     pub(crate) fn is_busy(&self, is_busy_low: bool) -> bool {
-        (is_busy_low && self.busy.is_low()) || (!is_busy_low && self.busy.is_high())
+        (is_busy_low && self.busy.is_low().ok().unwrap()) || (!is_busy_low && self.busy.is_high().ok().unwrap())
     }
 
     /// Resets the device.

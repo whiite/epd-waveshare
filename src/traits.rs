@@ -2,8 +2,9 @@ use crate::color::Color;
 use core::marker::Sized;
 use embedded_hal::{
     blocking::{delay::*, spi::Write},
-    digital::*,
+    digital::v2::{InputPin, OutputPin},
 };
+use crate::Error;
 
 /// All commands need to have this trait which gives the address of the command
 /// which needs to be send via SPI with activated CommandsPin (Data/Command Pin in CommandMode)
@@ -27,14 +28,16 @@ impl Default for RefreshLUT {
     }
 }
 
-pub(crate) trait InternalWiAdditions<SPI, CS, BUSY, DC, RST>
+pub(crate) trait InternalWiAdditions<SPI, CS, BUSY, DC, RST, SpiE, PinRE, PinWE>
 where
-    SPI: Write<u8>,
-    CS: OutputPin,
-    BUSY: InputPin,
-    DC: OutputPin,
-    RST: OutputPin,
+    SPI: Write<u8, Error = SpiE>,
+    CS: OutputPin<Error = PinWE>,
+    BUSY: InputPin<Error = PinRE>,
+    DC: OutputPin<Error = PinWE>,
+    RST: OutputPin<Error = PinWE>,
 {
+    type Error;
+    
     /// This initialises the EPD and powers it up
     ///
     /// This function is already called from
@@ -49,20 +52,22 @@ where
         &mut self,
         spi: &mut SPI,
         delay: &mut DELAY,
-    ) -> Result<(), SPI::Error>;
+    ) -> Result<(), Self::Error>;
 }
 
 /// All the functions to interact with the EPDs
 ///
 /// This trait includes all public functions to use the EPDS
-pub trait WaveshareDisplay<SPI, CS, BUSY, DC, RST>
+pub trait WaveshareDisplay<SPI, CS, BUSY, DC, RST, SpiE, PinRE, PinWE>
 where
-    SPI: Write<u8>,
-    CS: OutputPin,
-    BUSY: InputPin,
-    DC: OutputPin,
-    RST: OutputPin,
+    SPI: Write<u8, Error = SpiE>,
+    CS: OutputPin<Error = PinWE>,
+    BUSY: InputPin<Error = PinRE>,
+    DC: OutputPin<Error = PinWE>,
+    RST: OutputPin<Error = PinWE>,
 {
+    type Error;
+    
     /// Creates a new driver from a SPI peripheral, CS Pin, Busy InputPin, DC
     ///
     /// This already initialises the device. That means [init()](WaveshareInterface::init()) isn't needed directly afterwards
@@ -73,7 +78,7 @@ where
         dc: DC,
         rst: RST,
         delay: &mut DELAY,
-    ) -> Result<Self, SPI::Error>
+    ) -> Result<Self, Self::Error>
     where
         Self: Sized;
 
@@ -83,14 +88,14 @@ where
     /// But you can also use [wake_up()](WaveshareInterface::wake_up()) to awaken.
     /// But as you need to power it up once more anyway you can also just directly use [new()](WaveshareInterface::new()) for resetting
     /// and initialising which already contains the reset
-    fn sleep(&mut self, spi: &mut SPI) -> Result<(), SPI::Error>;
+    fn sleep(&mut self, spi: &mut SPI) -> Result<(), Self::Error>;
 
     /// Wakes the device up from sleep
     fn wake_up<DELAY: DelayMs<u8>>(
         &mut self,
         spi: &mut SPI,
         delay: &mut DELAY,
-    ) -> Result<(), SPI::Error>;
+    ) -> Result<(), Self::Error>;
 
     /// Sets the backgroundcolor for various commands like [clear_frame()](WaveshareInterface::clear_frame())
     fn set_background_color(&mut self, color: Color);
@@ -105,7 +110,7 @@ where
     fn height(&self) -> u32;
 
     /// Transmit a full frame to the SRAM of the EPD
-    fn update_frame(&mut self, spi: &mut SPI, buffer: &[u8]) -> Result<(), SPI::Error>;
+    fn update_frame(&mut self, spi: &mut SPI, buffer: &[u8]) -> Result<(), Self::Error>;
 
     /// Transmits partial data to the SRAM of the EPD
     ///
@@ -120,17 +125,17 @@ where
         y: u32,
         width: u32,
         height: u32,
-    ) -> Result<(), SPI::Error>;
+    ) -> Result<(), Self::Error>;
 
     /// Displays the frame data from SRAM
     ///
     /// This function waits until the device isn`t busy anymore
-    fn display_frame(&mut self, spi: &mut SPI) -> Result<(), SPI::Error>;
+    fn display_frame(&mut self, spi: &mut SPI) -> Result<(), Self::Error>;
 
     /// Clears the frame buffer on the EPD with the declared background color
     ///
     /// The background color can be changed with [`set_background_color`]
-    fn clear_frame(&mut self, spi: &mut SPI) -> Result<(), SPI::Error>;
+    fn clear_frame(&mut self, spi: &mut SPI) -> Result<(), Self::Error>;
 
     /// Trait for using various Waveforms from different LUTs
     /// E.g. for partial refreshes
@@ -144,12 +149,12 @@ where
         &mut self,
         spi: &mut SPI,
         refresh_rate: Option<RefreshLUT>,
-    ) -> Result<(), SPI::Error>;
+    ) -> Result<(), Self::Error>;
 
     /// Checks if the display is busy transmitting data
     ///
     /// This is normally handled by the more complicated commands themselves,
     /// but in the case you send data and commands directly you might need to check
     /// if the device is still busy
-    fn is_busy(&self) -> bool;
+    fn is_busy(&self) -> Result<bool, Self::Error>;
 }
