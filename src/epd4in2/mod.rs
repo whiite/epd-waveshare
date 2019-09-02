@@ -98,6 +98,8 @@ where
         spi: &mut SPI,
         delay: &mut DELAY,
     ) -> Result<(), SPI::Error> {
+        self.wait_until_idle();
+
         // reset the device
         self.interface.reset(delay);
 
@@ -126,10 +128,7 @@ where
         // 3A 100HZ   29 150Hz 39 200HZ  31 171HZ DEFAULT: 3c 50Hz
         self.cmd_with_data(spi, Command::PLL_CONTROL, &[0x3A])?;
 
-        self.set_lut(spi, None)?;
-
-        self.wait_until_idle();
-        Ok(())
+        self.set_lut(spi, None)
     }
 }
 
@@ -188,6 +187,8 @@ where
     }
 
     fn sleep(&mut self, spi: &mut SPI) -> Result<(), SPI::Error> {
+        self.wait_until_idle();
+
         self.interface
             .cmd_with_data(spi, Command::VCOM_AND_DATA_INTERVAL_SETTING, &[0x17])?; //border floating
         self.command(spi, Command::VCM_DC_SETTING)?; // VCOM to 0V
@@ -201,13 +202,12 @@ where
         self.command(spi, Command::POWER_OFF)?;
         self.wait_until_idle();
         self.interface
-            .cmd_with_data(spi, Command::DEEP_SLEEP, &[0xA5])?;
-
-        self.wait_until_idle();
-        Ok(())
+            .cmd_with_data(spi, Command::DEEP_SLEEP, &[0xA5])
     }
 
     fn update_frame(&mut self, spi: &mut SPI, buffer: &[u8]) -> Result<(), SPI::Error> {
+        self.wait_until_idle();
+
         let color_value = self.color.get_byte_value();
 
         self.send_resolution(spi)?;
@@ -225,10 +225,7 @@ where
             .data_x_times(spi, color_value, WIDTH / 8 * HEIGHT)?;
 
         self.interface
-            .cmd_with_data(spi, Command::DATA_START_TRANSMISSION_2, buffer)?;
-
-        self.wait_until_idle();
-        Ok(())
+            .cmd_with_data(spi, Command::DATA_START_TRANSMISSION_2, buffer)
     }
 
     fn update_partial_frame(
@@ -240,7 +237,13 @@ where
         width: u32,
         height: u32,
     ) -> Result<(), SPI::Error> {
+        self.wait_until_idle();
+
         if buffer.len() as u32 != width / 8 * height {
+            assert!(
+                buffer.len() as u32 != width / 8 * height,
+                "Wrong Buffersize"
+            );
             //TODO: panic!! or sth like that
             //return Err("Wrong buffersize");
         }
@@ -272,20 +275,18 @@ where
 
         self.send_data(spi, buffer)?;
 
-        self.command(spi, Command::PARTIAL_OUT)?;
-
-        self.wait_until_idle();
-        Ok(())
+        self.command(spi, Command::PARTIAL_OUT)
     }
 
     fn display_frame(&mut self, spi: &mut SPI) -> Result<(), SPI::Error> {
-        self.command(spi, Command::DISPLAY_REFRESH)?;
-
         self.wait_until_idle();
-        Ok(())
+
+        self.command(spi, Command::DISPLAY_REFRESH)
     }
 
     fn clear_frame(&mut self, spi: &mut SPI) -> Result<(), SPI::Error> {
+        self.wait_until_idle();
+
         self.send_resolution(spi)?;
 
         let color_value = self.color.get_byte_value();
@@ -298,10 +299,7 @@ where
         self.interface
             .cmd(spi, Command::DATA_START_TRANSMISSION_2)?;
         self.interface
-            .data_x_times(spi, color_value, WIDTH / 8 * HEIGHT)?;
-
-        self.wait_until_idle();
-        Ok(())
+            .data_x_times(spi, color_value, WIDTH / 8 * HEIGHT)
     }
 
     fn set_background_color(&mut self, color: Color) {
@@ -397,6 +395,8 @@ where
         lut_wb: &[u8],
         lut_bb: &[u8],
     ) -> Result<(), SPI::Error> {
+        self.wait_until_idle();
+
         // LUT VCOM
         self.cmd_with_data(spi, Command::LUT_FOR_VCOM, lut_vcom)?;
 
@@ -410,10 +410,7 @@ where
         self.cmd_with_data(spi, Command::LUT_WHITE_TO_BLACK, lut_wb)?;
 
         // LUT BLACK to BLACK
-        self.cmd_with_data(spi, Command::LUT_BLACK_TO_BLACK, lut_bb)?;
-
-        self.wait_until_idle();
-        Ok(())
+        self.cmd_with_data(spi, Command::LUT_BLACK_TO_BLACK, lut_bb)
     }
 }
 
