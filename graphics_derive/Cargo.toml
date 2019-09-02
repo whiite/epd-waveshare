@@ -1,0 +1,26 @@
+[package]
+name = "graphics_derive"
+version = "0.1.0"
+authors = ["Christoph Groß <caemor@mailbox.org>"]
+edition = "2018"
+
+# [package]
+# authors = ["Christoph Groß <caemor@mailbox.org>"]
+# categories = ["embedded", "hardware-support", "no-std"]
+# description = "An embedded-hal based driver for ePaper displays from Waveshare formerly published as eink-waveshare-rs"
+# documentation = "https://docs.rs/epd-waveshare"
+# homepage = "https://github.com/caemor/epd-waveshare"
+# keywords = ["ePaper", "Display", "epd", "eink"]
+# license = "ISC"
+# name = "epd-waveshare"
+# readme = "README.md"
+# repository = "https://github.com/Caemor/epd-waveshare.git"
+# version = "0.3.2"
+# edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "1.0.5"
+quote = "1.0.2"
