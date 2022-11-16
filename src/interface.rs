@@ -60,10 +60,11 @@ where
         // high for data
         let _ = self.dc.set_high();
 
-        for val in data.iter().copied() {
-            // Transfer data one u8 at a time over spi
-            self.write(spi, &[val])?;
-        }
+        self.write(spi, data)?;
+        // for val in data.iter().copied() {
+        //     // Transfer data one u8 at a time over spi
+        //     self.write(spi, &[val])?;
+        // }
 
         Ok(())
     }
